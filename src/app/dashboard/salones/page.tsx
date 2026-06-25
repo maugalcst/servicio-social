@@ -1,3 +1,11 @@
 import { DashboardHeader } from "@/components/dashboard-header";
+import { ClassroomsManager } from "@/components/classrooms-manager";
 import { prisma } from "@/lib/prisma";
-export default async function SalonesPage() { const rows = await prisma.classroom.findMany({ orderBy: { number: "asc" } }); return <><DashboardHeader title="Lista de salones" subtitle="Catálogo de espacios disponibles." /><div className="content-wrap"><section className="table-card"><div className="table-heading"><div><h2>Salones</h2><p>Capacidad, tipo y disponibilidad</p></div></div><table><thead><tr><th>Salón</th><th>Edificio</th><th>Capacidad</th><th>Tipo</th><th>Estado</th></tr></thead><tbody>{rows.map(x => <tr key={x.id}><td>{x.number}</td><td>{x.building}</td><td>{x.capacity}</td><td>{x.type}</td><td><span className={`status ${x.status === "AVAILABLE" ? "approved" : "rejected"}`}>{x.status === "AVAILABLE" ? "Disponible" : x.status}</span></td></tr>)}</tbody></table></section></div></>; }
+
+export default async function SalonesPage() {
+  const classrooms = await prisma.classroom.findMany({
+    select: { id: true, building: true, floor: true, number: true, capacity: true },
+    orderBy: [{ building: "asc" }, { floor: "asc" }, { number: "asc" }]
+  });
+  return <><DashboardHeader title="Lista de salones" subtitle="Listado de los salones registrados, puede agregar o quitar salones."/><div className="content-wrap"><ClassroomsManager classrooms={classrooms}/></div></>;
+}

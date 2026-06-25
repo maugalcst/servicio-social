@@ -62,27 +62,28 @@ model Career {
 }
 
 model Subject {
-  id        Int                @id @default(autoincrement())
-  code      String             @unique
-  name      String
-  semester Int
-  careerId Int
-  career   Career             @relation(fields: [careerId], references: [id])
-  requests ClassroomRequest[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  id           Int                @id @default(autoincrement())
+  code         String             @unique
+  name         String
+  coordination String             @default("Coordinación")
+  semester     Int
+  careers      Career[]
+  requests     ClassroomRequest[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 }
 
 model Classroom {
-  id        Int                @id @default(autoincrement())
+  id        Int                 @id @default(autoincrement())
   number    String
   building  String
+  floor     Int                 @default(1)
   capacity  Int
   type      String
-  status    ClassroomStatus    @default(AVAILABLE)
+  status    ClassroomStatus     @default(AVAILABLE)
   requests  ClassroomRequest[]
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   @@unique([number, building])
 }

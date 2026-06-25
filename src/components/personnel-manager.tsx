@@ -1,0 +1,20 @@
+"use client";
+import { useMemo, useState, useTransition } from "react";
+import { Pencil, Plus, Trash2, ArrowUpDown } from "lucide-react";
+import { deletePersonAction, savePersonAction } from "@/app/actions";
+
+type Career={id:number;acronym:string;name:string};
+type Person={id:number;name:string;email:string;role:"ADMIN"|"COORDINATOR"|"TEACHER";careerId:number|null;career:Career|null};
+const roleLabel={ADMIN:"Administrador",COORDINATOR:"Coordinador",TEACHER:"Ayudante"};
+const empty={id:0,name:"",email:"",role:"TEACHER" as const,careerId:0,password:""};
+export function PersonnelManager({people,careers,currentUserId}:{people:Person[];careers:Career[];currentUserId:number}){
+ const [mode,setMode]=useState<"add"|"edit"|"delete"|null>(null); const [form,setForm]=useState(empty); const [pending,start]=useTransition();
+ const selected=useMemo(()=>people.find(p=>p.id===form.id),[people,form.id]);
+ const openAdd=()=>{setForm({...empty,careerId:careers[0]?.id||0});setMode("add")};
+ const openEdit=(p:Person)=>{setForm({id:p.id,name:p.name,email:p.email,role:p.role,careerId:p.careerId||careers[0]?.id||0,password:""});setMode("edit")};
+ const submit=()=>start(async()=>{const fd=new FormData(); if(form.id)fd.set("id",String(form.id));fd.set("name",form.name);fd.set("email",form.email);fd.set("role",form.role);fd.set("careerId",String(form.careerId));fd.set("password",form.password);await savePersonAction(fd);setMode(null)});
+ const remove=()=>start(async()=>{const fd=new FormData();fd.set("id",String(form.id));await deletePersonAction(fd);setMode(null)});
+ return <div className="crud-page"><div className="crud-toolbar"><button className="round-add" onClick={openAdd} aria-label="Agregar personal"><Plus/></button></div><section className="table-card crud-card"><div className="table-scroll"><table><thead><tr><th><ArrowUpDown size={12}/> Nombre</th><th><ArrowUpDown size={12}/> Área</th><th><ArrowUpDown size={12}/> Rol</th><th>Acciones</th></tr></thead><tbody>{people.map(p=><tr key={p.id}><td>{p.name}</td><td><span className="career-pill wide">{p.career?.acronym||"—"}</span></td><td>{roleLabel[p.role]}</td><td><div className="crud-actions"><button className="edit-btn" onClick={()=>openEdit(p)}><Pencil size={17}/></button><button className="delete-btn" disabled={p.id===currentUserId} onClick={()=>{setForm({...empty,id:p.id});setMode("delete")}}><Trash2 size={17}/></button></div></td></tr>)}</tbody></table></div></section>
+ {mode&&<div className="modal-backdrop"><div className={`modal crud-modal ${mode==="delete"?"confirm-modal":""}`}>{mode==="delete"?<><h2>Eliminar personal</h2><p>¿Estas seguro de eliminar a este usuario?</p><strong className="confirm-name">Usuario: {selected?.name}</strong><div className="confirm-actions"><button className="danger-wide" disabled={pending} onClick={remove}>Eliminar usuario</button><button onClick={()=>setMode(null)}>Cancelar</button></div></>:<><h2>{mode==="add"?"Agregar usuario":"Editar"}</h2><div className="crud-form"><input placeholder="NOMBRE" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><select value={form.careerId} onChange={e=>setForm({...form,careerId:Number(e.target.value)})}>{careers.map(c=><option key={c.id} value={c.id}>{c.acronym} — {c.name}</option>)}</select><select value={form.role} onChange={e=>setForm({...form,role:e.target.value as typeof form.role})}><option value="TEACHER">Ayudante</option><option value="COORDINATOR">Coordinador</option><option value="ADMIN">Administrador</option></select><input type="email" placeholder="USUARIO / CORREO" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input type="password" placeholder={mode==="edit"?"NUEVA CONTRASEÑA (OPCIONAL)":"CONTRASEÑA"} value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/></div><div className="form-actions"><button className="cancel-red" onClick={()=>setMode(null)}>Cancelar</button><button className="accept-green" disabled={pending} onClick={submit}>Aceptar</button></div></>}</div></div>}
+ </div>
+}
