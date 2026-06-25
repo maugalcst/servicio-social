@@ -3,12 +3,11 @@ import { useMemo, useState, useTransition } from "react";
 import { Pencil, Plus, Trash2, ArrowUpDown } from "lucide-react";
 import { deletePersonAction, savePersonAction } from "@/app/actions";
 
-type Career={id:number;acronym:string;name:string};
-type Person={id:number;name:string;email:string;role:"ADMIN"|"COORDINATOR"|"TEACHER";careerId:number|null;career:Career|null};
+type Career={id:number;acronym:string;name:string};type Person={id:number;name:string;email:string;role:"ADMIN"|"COORDINATOR"|"TEACHER";careerId:number|null;career:Career|null};type PersonForm={id:number;name:string;email:string;role:Person["role"];careerId:number;password:string};
 const roleLabel={ADMIN:"Administrador",COORDINATOR:"Coordinador",TEACHER:"Ayudante"};
-const empty={id:0,name:"",email:"",role:"TEACHER" as const,careerId:0,password:""};
+const empty:PersonForm={id:0,name:"",email:"",role:"TEACHER",careerId:0,password:""};
 export function PersonnelManager({people,careers,currentUserId}:{people:Person[];careers:Career[];currentUserId:number}){
- const [mode,setMode]=useState<"add"|"edit"|"delete"|null>(null); const [form,setForm]=useState(empty); const [pending,start]=useTransition();
+ const [mode,setMode]=useState<"add"|"edit"|"delete"|null>(null);const [form,setForm]=useState<PersonForm>(empty);const [pending,start]=useTransition();
  const selected=useMemo(()=>people.find(p=>p.id===form.id),[people,form.id]);
  const openAdd=()=>{setForm({...empty,careerId:careers[0]?.id||0});setMode("add")};
  const openEdit=(p:Person)=>{setForm({id:p.id,name:p.name,email:p.email,role:p.role,careerId:p.careerId||careers[0]?.id||0,password:""});setMode("edit")};
