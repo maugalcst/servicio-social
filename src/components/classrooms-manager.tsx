@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpDown, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { deleteClassroomAction, saveClassroomAction } from "@/app/actions";
 
 type Classroom = { id: number; building: string; floor: number; number: string; capacity: number };
@@ -52,19 +51,19 @@ export function ClassroomsManager({ classrooms }: { classrooms: Classroom[] }) {
     <section className="table-card subject-card classroom-card">
       <div className="subject-heading">
         <div><h2>Edificios y salones registrados</h2></div>
-        <button className="round-add" onClick={openAdd} aria-label="Agregar salón"><Plus /></button>
+        <button className="round-add" onClick={openAdd} aria-label="Agregar salón"><span className="bx bxs-plus-circle"></span></button>
       </div>
       <div className="filters-row classroom-filters">
         <div className="filter-group">
           <select value={buildingFilter} onChange={e=>changeFilter(setBuildingFilter,e.target.value)}><option value="">Edificio</option>{buildings.map(x=><option key={x} value={x}>{x}</option>)}</select>
           <select value={floorFilter} onChange={e=>changeFilter(setFloorFilter,e.target.value)}><option value="">Piso</option>{floors.map(x=><option key={x} value={x}>{x}</option>)}</select>
         </div>
-        <label className="search-box"><Search size={15}/><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar materia..." /></label>
+        <label className="search-box"><span className="bx bxs-search"></span><input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}} placeholder="Buscar materia..." /></label>
       </div>
       <div className="table-scroll"><table><thead><tr>
-        <th><ArrowUpDown size={12}/> Edificio</th><th><ArrowUpDown size={12}/> Piso</th><th><ArrowUpDown size={12}/> Salón</th><th><ArrowUpDown size={12}/> Cantidad</th><th>Acciones</th>
-      </tr></thead><tbody>{visible.map(x=><tr key={x.id}><td>{x.building}</td><td>{x.floor}</td><td>{x.number}</td><td>{x.capacity}</td><td><div className="crud-actions"><button className="edit-btn" onClick={()=>openEdit(x)} aria-label="Editar salón"><Pencil size={17}/></button><button className="delete-btn" onClick={()=>{setForm({...empty,id:x.id});setMode("delete")}} aria-label="Eliminar salón"><Trash2 size={17}/></button></div></td></tr>)}</tbody></table></div>
-      <div className="pagination"><button disabled={safePage<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}><ArrowLeft size={18}/></button><button disabled={safePage>=pageCount} onClick={()=>setPage(p=>Math.min(pageCount,p+1))}><ArrowRight size={18}/></button></div>
+        <th><span className="bx bxs-sort-alt"></span> Edificio</th><th><span className="bx bxs-sort-alt"></span> Piso</th><th><span className="bx bxs-sort-alt"></span> Salón</th><th><span className="bx bxs-sort-alt"></span> Cantidad</th><th>Acciones</th>
+      </tr></thead><tbody>{visible.map(x=><tr key={x.id}><td>{x.building}</td><td>{x.floor}</td><td>{x.number}</td><td>{x.capacity}</td><td><div className="crud-actions"><button className="edit-btn" onClick={()=>openEdit(x)} aria-label="Editar salón"><span className="bx bxs-pencil"></span></button><button className="delete-btn" onClick={()=>{setForm({...empty,id:x.id});setMode("delete")}} aria-label="Eliminar salón"><span className="bx bxs-trash-alt"></span></button></div></td></tr>)}</tbody></table></div>
+      <div className="pagination"><button disabled={safePage<=1} onClick={()=>setPage(p=>Math.max(1,p-1))}><span className="bx bxs-chevron-left"></span></button><button disabled={safePage>=pageCount} onClick={()=>setPage(p=>Math.min(pageCount,p+1))}><span className="bx bxs-chevron-right"></span></button></div>
     </section>
 
     {mode && <div className="modal-backdrop"><div className={`modal crud-modal classroom-modal ${mode==="delete"?"confirm-modal":""}`}>
