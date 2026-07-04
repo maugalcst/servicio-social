@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { BookOpen, Building2, ClipboardCheck, DoorOpen, Menu, Users } from "lucide-react";
 import { logoutAction } from "@/app/actions";
+import { useState } from "react";
 
 const items = [
   ["/dashboard/solicitudes", "Pendientes de revisión", ClipboardCheck],
@@ -11,18 +14,20 @@ const items = [
 ] as const;
 
 export function Sidebar({ userName, career }: { userName: string; career?: string | null }) {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <aside className="sidebar">
-      <div className="sidebar-top"><Menu size={25} /></div>
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
+      <div className="sidebar-top" onClick={() => setCollapsed(!collapsed)}><Menu size={25} /></div>
       <nav>
         {items.map(([href, label, Icon]) => (
-          <Link key={href} href={href}><Icon size={16} /><span>{label}</span></Link>
+          <Link key={href} href={href}><Icon size={16} /><span className={collapsed ? "hidden" : ""}>{label}</span></Link>
         ))}
       </nav>
       <div className="sidebar-user">
         <div className="avatar">●</div>
-        <div><strong>{userName}</strong><small>{career || "Administración"}</small></div>
-        <form action={logoutAction}><button type="submit">Salir</button></form>
+        <div className={collapsed ? "hidden" : ""}><strong>{userName}</strong><small>{career || "Administración"}</small></div>
+        {!collapsed && <form action={logoutAction}><button type="submit">Salir</button></form>}
       </div>
     </aside>
   );

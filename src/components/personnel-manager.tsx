@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
-import { Pencil, Plus, Trash2, ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { deletePersonAction, savePersonAction } from "@/app/actions";
 
 type Career={id:number;acronym:string;name:string};type Person={id:number;name:string;email:string;role:"ADMIN"|"COORDINATOR"|"TEACHER";careerId:number|null;career:Career|null};type PersonForm={id:number;name:string;email:string;role:Person["role"];careerId:number;password:string};
