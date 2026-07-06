@@ -6,11 +6,11 @@ import { logoutAction } from "@/app/actions";
 import { useState } from "react";
 
 const items = [
-  ["/dashboard/solicitudes", "Pendientes de revisión", ClipboardCheck],
-  ["/dashboard/asignaciones", "Salones asignados", DoorOpen],
-  ["/dashboard/personal", "Personal", Users],
-  ["/dashboard/materias", "Lista de materias", BookOpen],
-  ["/dashboard/salones", "Lista de salones", Building2]
+  ["/admin/solicitudes", "Pendientes de revisión", ClipboardCheck],
+  ["/admin/asignaciones", "Salones asignados", DoorOpen],
+  ["/admin/personal", "Personal", Users],
+  ["/admin/materias", "Lista de materias", BookOpen],
+  ["/admin/salones", "Lista de salones", Building2]
 ] as const;
 
 export function Sidebar({ userName, career }: { userName: string; career?: string | null }) {
@@ -18,7 +18,7 @@ export function Sidebar({ userName, career }: { userName: string; career?: strin
 
   return (
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
-      <div className="sidebar-top" onClick={() => setCollapsed(!collapsed)}><Menu size={25} /></div>
+      <div className="sidebar-top"></div>
       <nav>
         {items.map(([href, label, Icon]) => (
           <Link key={href} href={href}><Icon size={16} /><span className={collapsed ? "hidden" : ""}>{label}</span></Link>
