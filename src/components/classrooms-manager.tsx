@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { Pencil, Plus, Trash2, ArrowLeft, ArrowRight, ArrowUpDown, Search } from "lucide-react";
 import { deleteClassroomAction, saveClassroomAction } from "@/app/actions";
 
 type Classroom = { id: number; building: string; floor: number; number: string; capacity: number };
