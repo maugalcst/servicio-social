@@ -1,7 +1,18 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { AlertCircle, ArrowUpDown, CheckCircle2, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+    AlertCircle,
+    ArrowLeft,
+    ArrowRight,
+    ArrowUpDown,
+    CheckCircle2,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+    X
+} from "lucide-react";
 import { deletePersonAction, savePersonAction } from "@/app/actions";
 
 type Career = {
@@ -10,11 +21,13 @@ type Career = {
     name: string;
 };
 
+type PersonRole = "ADMIN" | "COORDINATOR" | "TEACHER";
+
 type Person = {
     id: number;
     name: string;
-    email: string;
-    role: "ADMIN" | "COORDINATOR" | "TEACHER";
+    username: string;
+    role: PersonRole;
     careerId: number | null;
     career: Career | null;
 };
@@ -22,8 +35,8 @@ type Person = {
 type PersonForm = {
     id: number;
     name: string;
-    email: string;
-    role: Person["role"];
+    username: string;
+    role: PersonRole;
     careerId: number;
     password: string;
 };
@@ -39,7 +52,9 @@ type Notice = {
     text: string;
 };
 
-const roleLabel: Record<Person["role"], string> = {
+const PAGE_SIZE = 10;
+
+const roleLabel: Record<PersonRole, string> = {
     ADMIN: "Administrador",
     COORDINATOR: "Coordinador",
     TEACHER: "Ayudante"
@@ -48,7 +63,7 @@ const roleLabel: Record<Person["role"], string> = {
 const emptyForm: PersonForm = {
     id: 0,
     name: "",
-    email: "",
+    username: "",
     role: "TEACHER",
     careerId: 0,
     password: ""
@@ -66,12 +81,55 @@ export function PersonnelManager({
     const [mode, setMode] = useState<"add" | "edit" | "delete" | null>(null);
     const [form, setForm] = useState<PersonForm>(emptyForm);
     const [notice, setNotice] = useState<Notice | null>(null);
+    const [careerFilter, setCareerFilter] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
+    const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
     const [pending, startTransition] = useTransition();
 
     const selected = useMemo(
         () => people.find((person) => person.id === form.id),
         [people, form.id]
     );
+
+    const filtered = useMemo(() => {
+        const term = search.trim().toLowerCase();
+
+        return people.filter((person) => {
+            const roleText = roleLabel[person.role].toLowerCase();
+            const careerAcronym = person.career?.acronym?.toLowerCase() || "";
+            const careerName = person.career?.name?.toLowerCase() || "";
+            const matchesSearch =
+                !term ||
+                person.name.toLowerCase().includes(term) ||
+                person.username.toLowerCase().includes(term) ||
+                roleText.includes(term) ||
+                person.role.toLowerCase().includes(term) ||
+                careerAcronym.includes(term) ||
+                careerName.includes(term);
+
+            const matchesCareer = !careerFilter || String(person.careerId || "") === careerFilter;
+            const matchesRole = !roleFilter || person.role === roleFilter;
+
+            return matchesSearch && matchesCareer && matchesRole;
+        });
+    }, [people, search, careerFilter, roleFilter]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const safePage = Math.min(page, pageCount);
+    const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+    const changeFilter = (setter: (value: string) => void, value: string) => {
+        setter(value);
+        setPage(1);
+    };
+
+    const clearFilters = () => {
+        setCareerFilter("");
+        setRoleFilter("");
+        setSearch("");
+        setPage(1);
+    };
 
     const openAdd = () => {
         setNotice(null);
@@ -84,7 +142,7 @@ export function PersonnelManager({
         setForm({
             id: person.id,
             name: person.name,
-            email: person.email,
+            username: person.username,
             role: person.role,
             careerId: person.careerId || careers[0]?.id || 0,
             password: ""
@@ -133,7 +191,7 @@ export function PersonnelManager({
 
             if (form.id) formData.set("id", String(form.id));
             formData.set("name", form.name);
-            formData.set("email", form.email);
+            formData.set("username", form.username);
             formData.set("role", form.role);
             formData.set("careerId", String(form.careerId));
             formData.set("password", form.password);
@@ -174,26 +232,70 @@ export function PersonnelManager({
 
     return (
         <div className="crud-page">
-            {notice && !mode ? (
-                <FloatingNotice notice={notice} onClose={() => setNotice(null)} />
-            ) : null}
+            {notice && !mode ? <FloatingNotice notice={notice} onClose={() => setNotice(null)} /> : null}
 
-            <div className="crud-toolbar">
-                <button className="round-add" onClick={openAdd} aria-label="Agregar personal">
-                    <Plus />
-                </button>
-            </div>
+            <section className="table-card subject-card classroom-card">
+                <div className="subject-heading">
+                    <div>
+                        <h2>Personal registrado</h2>
+                        <p>Administra usuarios, carreras asociadas y roles.</p>
+                    </div>
 
-            <section className="table-card crud-card">
+                    <button className="round-add" onClick={openAdd} aria-label="Agregar personal">
+                        <Plus size={20} />
+                    </button>
+                </div>
+
+                <div className="filters-row classroom-filters">
+                    <div className="filter-group">
+                        <select
+                            value={careerFilter}
+                            onChange={(event) => changeFilter(setCareerFilter, event.target.value)}
+                        >
+                            <option value="">Carrera</option>
+                            {careers.map((career) => (
+                                <option key={career.id} value={career.id}>
+                                    {career.acronym}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={roleFilter}
+                            onChange={(event) => changeFilter(setRoleFilter, event.target.value)}
+                        >
+                            <option value="">Rol</option>
+                            <option value="ADMIN">Administrador</option>
+                            <option value="COORDINATOR">Coordinador</option>
+                            <option value="TEACHER">Ayudante</option>
+                        </select>
+                    </div>
+
+                    <label className="search-box">
+                        <Search size={15} />
+                        <input
+                            value={search}
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setPage(1);
+                            }}
+                            placeholder="Buscar por nombre, usuario, carrera o rol..."
+                        />
+                    </label>
+                </div>
+
                 <div className="table-scroll">
                     <table>
                         <thead>
                             <tr>
                                 <th>
+                                    <ArrowUpDown size={12} /> Usuario
+                                </th>
+                                <th>
                                     <ArrowUpDown size={12} /> Nombre
                                 </th>
                                 <th>
-                                    <ArrowUpDown size={12} /> Área
+                                    <ArrowUpDown size={12} /> Carrera
                                 </th>
                                 <th>
                                     <ArrowUpDown size={12} /> Rol
@@ -203,43 +305,62 @@ export function PersonnelManager({
                         </thead>
 
                         <tbody>
-                            {people.map((person) => (
-                                <tr key={person.id}>
-                                    <td>{person.name}</td>
-                                    <td>
-                                        <span className="career-pill wide">
-                                            {person.career?.acronym || "—"}
-                                        </span>
-                                    </td>
-                                    <td>{roleLabel[person.role]}</td>
-                                    <td>
-                                        <div className="crud-actions">
-                                            <button
-                                                className="edit-btn"
-                                                onClick={() => openEdit(person)}
-                                                aria-label={`Editar ${person.name}`}
-                                            >
-                                                <Pencil size={17} />
-                                            </button>
-                                            <button
-                                                className="delete-btn"
-                                                disabled={person.id === currentUserId}
-                                                onClick={() => openDelete(person)}
-                                                aria-label={`Eliminar ${person.name}`}
-                                                title={
-                                                    person.id === currentUserId
-                                                        ? "No puedes eliminar tu propia cuenta"
-                                                        : "Eliminar usuario"
-                                                }
-                                            >
-                                                <Trash2 size={17} />
-                                            </button>
-                                        </div>
+                            {visible.length > 0 ? (
+                                visible.map((person) => (
+                                    <tr key={person.id}>
+                                        <td>{person.username}</td>
+                                        <td>{person.name}</td>
+                                        <td>
+                                            <span className="career-pill wide">{person.career?.acronym || "—"}</span>
+                                        </td>
+                                        <td>{roleLabel[person.role]}</td>
+                                        <td>
+                                            <div className="crud-actions">
+                                                <button
+                                                    className="edit-btn"
+                                                    onClick={() => openEdit(person)}
+                                                    aria-label={`Editar ${person.name}`}
+                                                >
+                                                    <Pencil size={17} />
+                                                </button>
+                                                <button
+                                                    className="delete-btn"
+                                                    disabled={person.id === currentUserId}
+                                                    onClick={() => openDelete(person)}
+                                                    aria-label={`Eliminar ${person.name}`}
+                                                    title={
+                                                        person.id === currentUserId
+                                                            ? "No puedes eliminar tu propia cuenta"
+                                                            : "Eliminar usuario"
+                                                    }
+                                                >
+                                                    <Trash2 size={17} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} style={{ textAlign: "center", padding: "28px 12px", color: "#6b7280" }}>
+                                        No hay personal que coincida con los filtros seleccionados.
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="pagination">
+                    <button disabled={safePage <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                        <ArrowLeft size={18} />
+                    </button>
+                    <span style={{ fontSize: 13, color: "#6b7280" }}>
+                        Página {safePage} de {pageCount}
+                    </span>
+                    <button disabled={safePage >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>
+                        <ArrowRight size={18} />
+                    </button>
                 </div>
             </section>
 
@@ -268,22 +389,19 @@ export function PersonnelManager({
                                 <h2>{mode === "add" ? "Agregar usuario" : "Editar"}</h2>
 
                                 <div className="crud-form">
+                                    <label>Nombre</label>
                                     <input
                                         placeholder="NOMBRE"
                                         value={form.name}
                                         onChange={(event) => setForm({ ...form, name: event.target.value })}
                                     />
 
+                                    <label>Carrera</label>
                                     <select
                                         value={form.careerId}
-                                        onChange={(event) =>
-                                            setForm({ ...form, careerId: Number(event.target.value) })
-                                        }
+                                        onChange={(event) => setForm({ ...form, careerId: Number(event.target.value) })}
                                     >
-                                        {careers.length === 0 ? (
-                                            <option value={0}>No hay áreas registradas</option>
-                                        ) : null}
-
+                                        {careers.length === 0 ? <option value={0}>No hay carreras registradas</option> : null}
                                         {careers.map((career) => (
                                             <option key={career.id} value={career.id}>
                                                 {career.acronym} — {career.name}
@@ -291,29 +409,28 @@ export function PersonnelManager({
                                         ))}
                                     </select>
 
+                                    <label>Rol</label>
                                     <select
                                         value={form.role}
-                                        onChange={(event) =>
-                                            setForm({ ...form, role: event.target.value as Person["role"] })
-                                        }
+                                        onChange={(event) => setForm({ ...form, role: event.target.value as PersonRole })}
                                     >
                                         <option value="TEACHER">Ayudante</option>
                                         <option value="COORDINATOR">Coordinador</option>
                                         <option value="ADMIN">Administrador</option>
                                     </select>
 
+                                    <label>Usuario</label>
                                     <input
-                                        type="email"
-                                        placeholder="CORREO"
-                                        value={form.email}
-                                        onChange={(event) => setForm({ ...form, email: event.target.value })}
+                                        type="text"
+                                        placeholder="USUARIO"
+                                        value={form.username}
+                                        onChange={(event) => setForm({ ...form, username: event.target.value })}
                                     />
 
+                                    <label>Contraseña</label>
                                     <input
                                         type="password"
-                                        placeholder={
-                                            mode === "edit" ? "NUEVA CONTRASEÑA (OPCIONAL)" : "CONTRASEÑA"
-                                        }
+                                        placeholder={mode === "edit" ? "NUEVA CONTRASEÑA (OPCIONAL)" : "CONTRASEÑA"}
                                         value={form.password}
                                         onChange={(event) => setForm({ ...form, password: event.target.value })}
                                     />

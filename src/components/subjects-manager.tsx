@@ -1,17 +1,431 @@
 "use client";
-import { useMemo,useState,useTransition } from "react";
-import { ArrowLeft,ArrowRight,ArrowUpDown,Grid3X3,Pencil,Plus,Search,Trash2,X } from "lucide-react";
-import { deleteSubjectAction,saveSubjectAction } from "@/app/actions";
-type Career={id:number;acronym:string;name:string}; type Subject={id:number;code:string;name:string;coordination:string;semester:number;careers:Career[]};
-const blank={id:0,code:"",name:"",coordination:"Coordinación",semester:1,careerIds:[] as number[]};
-export function SubjectsManager({subjects,careers}:{subjects:Subject[];careers:Career[]}){
- const [mode,setMode]=useState<"add"|"edit"|"delete"|null>(null),[form,setForm]=useState(blank),[multi,setMulti]=useState(false),[search,setSearch]=useState(""); const [pending,start]=useTransition();
- const selected=useMemo(()=>subjects.find(s=>s.id===form.id),[subjects,form.id]); const rows=subjects.filter(s=>(s.code+" "+s.name).toLowerCase().includes(search.toLowerCase()));
- const edit=(s:Subject)=>{setForm({id:s.id,code:s.code,name:s.name,coordination:s.coordination,semester:s.semester,careerIds:s.careers.map(c=>c.id)});setMode("edit")};
- const toggle=(id:number)=>setForm({...form,careerIds:form.careerIds.includes(id)?form.careerIds.filter(x=>x!==id):[...form.careerIds,id]});
- const save=()=>start(async()=>{const fd=new FormData();if(form.id)fd.set("id",String(form.id));fd.set("code",form.code);fd.set("name",form.name);fd.set("coordination",form.coordination);fd.set("semester",String(form.semester));form.careerIds.forEach(id=>fd.append("careerIds",String(id)));await saveSubjectAction(fd);setMode(null)});
- const remove=()=>start(async()=>{const fd=new FormData();fd.set("id",String(form.id));await deleteSubjectAction(fd);setMode(null)});
- return <div className="crud-page"><section className="table-card subject-card"><div className="subject-heading"><div><h2>Materias registradas</h2><p>Cantidad de materias: {subjects.length}</p></div><button className="round-add" onClick={()=>{setForm({...blank,careerIds:careers[0]?[careers[0].id]:[]});setMode("add")}}><Plus/></button></div><div className="filters-row"><div className="filter-group"><select><option>Coordinación</option></select><select><option>Carrera</option></select><select><option>Semestre</option></select></div><label className="search-box"><Search size={15}/><input placeholder="Buscar materia..." value={search} onChange={e=>setSearch(e.target.value)}/></label></div><div className="table-scroll"><table><thead><tr><th><ArrowUpDown size={12}/> Clave</th><th><ArrowUpDown size={12}/> Nombre</th><th><ArrowUpDown size={12}/> Coordinación</th><th>Carrera</th><th><ArrowUpDown size={12}/> Semestre</th><th>Acciones</th></tr></thead><tbody>{rows.map(s=><tr key={s.id}><td>{s.code}</td><td>{s.name}</td><td>{s.coordination}</td><td><div className="pill-list">{s.careers.map(c=><span className="career-pill" key={c.id}>{c.acronym}</span>)}</div></td><td>{s.semester}to</td><td><div className="crud-actions"><button className="edit-btn" onClick={()=>edit(s)}><Pencil size={17}/></button><button className="delete-btn" onClick={()=>{setForm({...blank,id:s.id});setMode("delete")}}><Trash2 size={17}/></button></div></td></tr>)}</tbody></table></div><div className="pagination"><button><ArrowLeft size={18}/></button><button><ArrowRight size={18}/></button></div></section>
- {mode&&<div className="modal-backdrop"><div className={`modal crud-modal subject-modal ${mode==="delete"?"confirm-modal":""}`}>{mode==="delete"?<><h2>Eliminar materia</h2><p>¿Estas seguro de eliminar la materia?</p><strong className="confirm-name">Materia: {selected?.name}</strong><div className="confirm-actions"><button className="danger-wide" disabled={pending} onClick={remove}>Eliminar materia</button><button onClick={()=>setMode(null)}>Cancelar</button></div></>:<><h2>{mode==="add"?"Agregar materia":"Editar"}</h2><div className="crud-form"><input placeholder="Clave" value={form.code} onChange={e=>setForm({...form,code:e.target.value})}/><input placeholder="Nombre" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input placeholder="Coordinación" value={form.coordination} onChange={e=>setForm({...form,coordination:e.target.value})}/><div className="multi-wrap"><button className="multi-field" onClick={()=>setMulti(!multi)}><span>{form.careerIds.length?form.careerIds.map(id=>{const c=careers.find(x=>x.id===id);return <em key={id}>{c?.acronym}<span className="bx bxs-x" onClick={(e)=>{e.stopPropagation();toggle(id)}}></span></em>}):"Agrega carrera o carreras desde el menú multiselección"}</span><span className="bx bxs-grid-small"></span></button>{multi&&<div className="multi-menu">{careers.map(c=><button key={c.id} className={form.careerIds.includes(c.id)?"chosen":""} onClick={()=>toggle(c.id)}>{c.acronym}</button>)}</div>}</div><input type="number" min="1" max="12" placeholder="Semestre" value={form.semester} onChange={e=>setForm({...form,semester:Number(e.target.value)})}/></div><div className="form-actions"><button className="cancel-red" onClick={()=>setMode(null)}>Cancelar</button><button className="accept-green" disabled={pending} onClick={save}>Aceptar</button></div></>}</div></div>}
- </div>
+
+import { useMemo, useState, useTransition } from "react";
+import {
+    ArrowLeft,
+    ArrowRight,
+    ArrowUpDown,
+    Grid3X3,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+    X
+} from "lucide-react";
+import { deleteSubjectAction, saveSubjectAction } from "@/app/actions";
+
+type ActionResult = {
+    ok: boolean;
+    error?: string;
+    message?: string;
+};
+
+type Career = {
+    id: number;
+    acronym: string;
+    name: string;
+};
+
+type Subject = {
+    id: number;
+    code: string;
+    name: string;
+    type: string;
+    semester: number;
+    careers: Career[];
+};
+
+type SubjectForm = {
+    id: number;
+    code: string;
+    name: string;
+    type: string;
+    semester: number;
+    careerIds: number[];
+};
+
+const blank: SubjectForm = {
+    id: 0,
+    code: "",
+    name: "",
+    type: "",
+    semester: 1,
+    careerIds: []
+};
+
+export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; careers: Career[] }) {
+    const [mode, setMode] = useState<"add" | "edit" | "delete" | null>(null);
+    const [form, setForm] = useState<SubjectForm>(blank);
+    const [multi, setMulti] = useState(false);
+    const [search, setSearch] = useState("");
+    const [careerFilter, setCareerFilter] = useState("all");
+    const [semesterFilter, setSemesterFilter] = useState("all");
+    const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [pending, startTransition] = useTransition();
+
+    const selected = useMemo(
+        () => subjects.find((subject) => subject.id === form.id),
+        [subjects, form.id]
+    );
+
+    const semesterOptions = useMemo(() => {
+        const semesters = new Set<number>();
+        subjects.forEach((subject) => semesters.add(subject.semester));
+        return Array.from(semesters).sort((a, b) => a - b);
+    }, [subjects]);
+
+    const rows = useMemo(() => {
+        const normalizedSearch = search.trim().toLowerCase();
+        const selectedCareerId = Number(careerFilter);
+        const selectedSemester = Number(semesterFilter);
+
+        return subjects.filter((subject) => {
+            const matchesSearch =
+                !normalizedSearch ||
+                [subject.code, subject.name, subject.type, ...subject.careers.map((career) => career.acronym)]
+                    .join(" ")
+                    .toLowerCase()
+                    .includes(normalizedSearch);
+
+            const matchesCareer =
+                careerFilter === "all" || subject.careers.some((career) => career.id === selectedCareerId);
+
+            const matchesSemester = semesterFilter === "all" || subject.semester === selectedSemester;
+
+            return matchesSearch && matchesCareer && matchesSemester;
+        });
+    }, [subjects, search, careerFilter, semesterFilter]);
+
+    const openAdd = () => {
+        setNotice(null);
+        setMulti(false);
+        setForm({
+            ...blank,
+            careerIds: careers[0] ? [careers[0].id] : []
+        });
+        setMode("add");
+    };
+
+    const openEdit = (subject: Subject) => {
+        setNotice(null);
+        setMulti(false);
+        setForm({
+            id: subject.id,
+            code: subject.code,
+            name: subject.name,
+            type: subject.type,
+            semester: subject.semester,
+            careerIds: subject.careers.map((career) => career.id)
+        });
+        setMode("edit");
+    };
+
+    const openDelete = (subject: Subject) => {
+        setNotice(null);
+        setMulti(false);
+        setForm({ ...blank, id: subject.id });
+        setMode("delete");
+    };
+
+    const closeModal = () => {
+        setMode(null);
+        setMulti(false);
+        setForm(blank);
+    };
+
+    const toggleCareer = (careerId: number) => {
+        setForm((current) => ({
+            ...current,
+            careerIds: current.careerIds.includes(careerId)
+                ? current.careerIds.filter((id) => id !== careerId)
+                : [...current.careerIds, careerId]
+        }));
+    };
+
+    const save = () => {
+        startTransition(async () => {
+            setNotice(null);
+
+            const formData = new FormData();
+            if (form.id) formData.set("id", String(form.id));
+            formData.set("code", form.code);
+            formData.set("name", form.name);
+            formData.set("type", form.type);
+            formData.set("semester", String(form.semester));
+            form.careerIds.forEach((id) => formData.append("careerIds", String(id)));
+
+            const result = (await saveSubjectAction(formData)) as ActionResult | undefined;
+
+            if (result && !result.ok) {
+                setNotice({ type: "error", text: result.error || "No se pudo guardar la materia." });
+                return;
+            }
+
+            setNotice({ type: "success", text: result?.message || "Materia guardada correctamente." });
+            closeModal();
+        });
+    };
+
+    const remove = () => {
+        startTransition(async () => {
+            setNotice(null);
+
+            const formData = new FormData();
+            formData.set("id", String(form.id));
+
+            const result = (await deleteSubjectAction(formData)) as ActionResult | undefined;
+
+            if (result && !result.ok) {
+                setNotice({ type: "error", text: result.error || "No se pudo eliminar la materia." });
+                return;
+            }
+
+            setNotice({ type: "success", text: result?.message || "Materia eliminada correctamente." });
+            closeModal();
+        });
+    };
+
+    return (
+        <div className="crud-page">
+            {notice && (
+                <div className={`action-toast ${notice.type === "error" ? "error" : "success"}`}>
+                    <span>{notice.text}</span>
+                    <button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            <section className="table-card subject-card">
+                <div className="subject-heading">
+                    <div>
+                        <h2>Materias registradas</h2>
+                        <p>Cantidad de materias: {subjects.length}</p>
+                    </div>
+
+                    <button className="round-add" type="button" onClick={openAdd} aria-label="Agregar materia">
+                        <Plus />
+                    </button>
+                </div>
+
+                <div className="filters-row">
+                    <div className="filter-group">
+                        <select value={careerFilter} onChange={(event) => setCareerFilter(event.target.value)}>
+                            <option value="all">Carrera</option>
+                            {careers.map((career) => (
+                                <option key={career.id} value={career.id}>
+                                    {career.acronym}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select value={semesterFilter} onChange={(event) => setSemesterFilter(event.target.value)}>
+                            <option value="all">Semestre</option>
+                            {semesterOptions.map((semester) => (
+                                <option key={semester} value={semester}>
+                                    {semester}to
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <label className="search-box">
+                        <Search size={15} />
+                        <input
+                            placeholder="Buscar materia..."
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                        />
+                    </label>
+                </div>
+
+                <div className="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>
+                                    <ArrowUpDown size={12} /> Clave
+                                </th>
+                                <th>
+                                    <ArrowUpDown size={12} /> Nombre
+                                </th>
+                                <th>
+                                    <ArrowUpDown size={12} /> Tipo
+                                </th>
+                                <th>Carrera</th>
+                                <th>
+                                    <ArrowUpDown size={12} /> Semestre
+                                </th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="empty-row">
+                                        No se encontraron materias con los filtros seleccionados.
+                                    </td>
+                                </tr>
+                            ) : (
+                                rows.map((subject) => (
+                                    <tr key={subject.id}>
+                                        <td>{subject.code}</td>
+                                        <td>{subject.name}</td>
+                                        <td>{subject.type}</td>
+                                        <td>
+                                            <div className="pill-list">
+                                                {subject.careers.map((career) => (
+                                                    <span className="career-pill" key={career.id}>
+                                                        {career.acronym}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td>{subject.semester}to</td>
+                                        <td>
+                                            <div className="crud-actions">
+                                                <button className="edit-btn" type="button" onClick={() => openEdit(subject)}>
+                                                    <Pencil size={17} />
+                                                </button>
+                                                <button className="delete-btn" type="button" onClick={() => openDelete(subject)}>
+                                                    <Trash2 size={17} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="pagination">
+                    <button type="button">
+                        <ArrowLeft size={18} />
+                    </button>
+                    <button type="button">
+                        <ArrowRight size={18} />
+                    </button>
+                </div>
+            </section>
+
+            {mode && (
+                <div className="modal-backdrop">
+                    <div className={`modal crud-modal subject-modal ${mode === "delete" ? "confirm-modal" : ""}`}>
+                        {mode === "delete" ? (
+                            <>
+                                <h2>Eliminar materia</h2>
+                                <p>¿Estas seguro de eliminar la materia?</p>
+                                <strong className="confirm-name">Materia: {selected?.name}</strong>
+
+                                <div className="confirm-actions">
+                                    <button className="danger-wide" type="button" disabled={pending} onClick={remove}>
+                                        {pending ? "Eliminando..." : "Eliminar materia"}
+                                    </button>
+                                    <button type="button" disabled={pending} onClick={closeModal}>
+                                        Cancelar
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <h2>{mode === "add" ? "Agregar materia" : "Editar"}</h2>
+
+                                {notice?.type === "error" && <div className="modal-error">{notice.text}</div>}
+
+                                <div className="crud-form">
+                                    <label>Clave</label>
+                                    <input
+                                        placeholder="Clave"
+                                        value={form.code}
+                                        onChange={(event) => setForm({ ...form, code: event.target.value })}
+                                    />
+
+                                    <label>Nombre</label>
+                                    <input
+                                        placeholder="Nombre"
+                                        value={form.name}
+                                        onChange={(event) => setForm({ ...form, name: event.target.value })}
+                                    />
+
+                                    <label>Tipo</label>
+                                    <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>
+                                        <option value="">Seleccione el tipo</option>
+                                        <option value="Ordinaria">Ordinaria</option>
+                                        <option value="Laboratorio">Laboratorio</option>
+                                    </select>
+
+                                    <label>Carrera (s)</label>
+                                    <div className="multi-wrap">
+                                        <button className="multi-field" type="button" onClick={() => setMulti((current) => !current)}>
+                                            <span>
+                                                {form.careerIds.length
+                                                    ? form.careerIds.map((id) => {
+                                                        const career = careers.find((item) => item.id === id);
+                                                        if (!career) return null;
+
+                                                        return (
+                                                            <em key={id}>
+                                                                {career.acronym}
+                                                                <span
+                                                                    role="button"
+                                                                    tabIndex={0}
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        toggleCareer(id);
+                                                                    }}
+                                                                >
+                                                                    <X size={12} />
+                                                                </span>
+                                                            </em>
+                                                        );
+                                                    })
+                                                    : "Agrega carrera o carreras desde el menú multiselección"}
+                                            </span>
+                                            <Grid3X3 size={17} />
+                                        </button>
+
+                                        {multi && (
+                                            <div className="multi-menu">
+                                                {careers.map((career) => (
+                                                    <button
+                                                        key={career.id}
+                                                        type="button"
+                                                        className={form.careerIds.includes(career.id) ? "chosen" : ""}
+                                                        onClick={() => toggleCareer(career.id)}
+                                                    >
+                                                        {career.acronym}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <label>Semestre</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="12"
+                                        placeholder="Semestre"
+                                        value={form.semester}
+                                        onChange={(event) => setForm({ ...form, semester: Number(event.target.value) })}
+                                    />
+                                </div>
+
+                                <div className="form-actions">
+                                    <button className="cancel-red" type="button" disabled={pending} onClick={closeModal}>
+                                        Cancelar
+                                    </button>
+                                    <button className="accept-green" type="button" disabled={pending} onClick={save}>
+                                        {pending ? "Guardando..." : "Aceptar"}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
 }

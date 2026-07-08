@@ -29,10 +29,6 @@ export default async function AvailableClassroomsPage() {
     <>
       <DashboardHeader title="Salones disponibles" subtitle="Consulta salones, capacidad, mantenimiento y horarios ocupados" />
       <div className="content-wrap">
-        <section className="map-card">
-          <div><h2>Mapa de edificios FIME</h2><p>Referencia visual para ubicar los edificios antes de solicitar salón.</p></div>
-          <img src="/images/fime-campus-map.png" alt="Mapa de edificios FIME" />
-        </section>
         <section className="table-card coordinator-card classroom-card">
           <div className="table-heading"><div><h2>Edificios y salones</h2><p>La disponibilidad final se valida al enviar la solicitud por día y hora.</p></div><input placeholder="Buscar salón..." /></div>
           <div className="table-scroll">

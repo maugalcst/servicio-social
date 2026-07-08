@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ClassroomStatus, PrismaClient, RequestStatus, UserRole, WeekDay } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -57,48 +58,16 @@ async function main() {
 
   const passwordHash = await bcrypt.hash("admin123", 12);
   const people = [
-    ["Juan García Gallegos", "admin@uanl.edu.mx", UserRole.ADMIN, 0],
-    ["Juan Pérez Rodríguez", "juan.perez@uanl.edu.mx", UserRole.TEACHER, 0],
-    ["Eduardo Gallegos", "eduardo.gallegos@uanl.edu.mx", UserRole.TEACHER, 1],
-    ["Mauricio Castillo", "mauricio.castillo@uanl.edu.mx", UserRole.COORDINATOR, 0],
-    ["Omar Herrera", "omar.herrera@uanl.edu.mx", UserRole.TEACHER, 2],
-    ["María Rojas", "maria.rojas@uanl.edu.mx", UserRole.COORDINATOR, 3],
-    ["Francisco Elías", "francisco.elias@uanl.edu.mx", UserRole.TEACHER, 4],
-    ["Verónica Rivera", "veronica.rivera@uanl.edu.mx", UserRole.TEACHER, 3],
-    ["Guadalupe Pérez", "guadalupe.perez@uanl.edu.mx", UserRole.TEACHER, 0],
-    ["Emilio Vázquez", "emilio.vazquez@uanl.edu.mx", UserRole.COORDINATOR, 2]
+    ["Juan García Gallegos", "admin", UserRole.ADMIN, 0],
+    ["Aldair Alejandro Beltran Melendez", "1802548", UserRole.TEACHER, 0],
   ] as const;
 
   const users = await Promise.all(
-    people.map(([name, email, role, careerIndex]) =>
-      prisma.user.create({ data: { name, email, passwordHash, role, careerId: careers[careerIndex].id } })
+    people.map(([name, username, role, careerIndex]) =>
+      prisma.user.create({ data: { name, username, passwordHash, role, careerId: careers[careerIndex].id } })
     )
   );
 
-  const subjectSpecs = [
-    ["DISMOV", "Ingeniería en Dispositivos Móviles", 6, [0, 3]],
-    ["MATIV", "Matemáticas IV", 4, [1]],
-    ["BD", "Bases de Datos", 5, [0, 3]],
-    ["IA", "Inteligencia Artificial", 7, [0, 2, 3]],
-    ["REDES", "Redes de Computadoras", 6, [0, 1]],
-    ["ARQ", "Arquitectura de Computadoras", 5, [0, 4]],
-    ["CALC", "Cálculo Diferencial", 2, [1, 2, 4]],
-    ["PROG", "Programación", 1, [0, 3, 5]]
-  ] as const;
-
-  const subjects = await Promise.all(
-    subjectSpecs.map(([code, name, semester, ids]) =>
-      prisma.subject.create({
-        data: {
-          code,
-          name,
-          semester,
-          coordination: "Coordinación",
-          careers: { connect: ids.map((index) => ({ id: careers[index].id })) }
-        }
-      })
-    )
-  );
 
   const classroomNumbersByBuilding: Record<string, string[]> = {
     "1": [
@@ -143,7 +112,7 @@ async function main() {
     "11": ["11202", "11203", "11204", "11205", "11301", "11302", "11304"],
     "12": [
       "12201", "12202", "12203", "12204", "12205", "12206", "12207", "12208",
-      "12_3D", "12_SC", "12BDI", "12BLC", "12BMC", "12BMT", "12LIA", "12MTC", "12PLC", "12ROV", "12-SC", "12TEJ", "LBIO", "LSUB"
+      "123D", "12SC", "12BDI", "12BLC", "12BMC", "12BMT", "12LIA", "12MTC", "12PLC", "12ROV", "12-SC", "12TEJ", "LBIO", "LSUB"
     ]
   };
 
@@ -204,7 +173,7 @@ async function main() {
   }
 
   const maintenanceClassroom = classrooms.find((classroom) => classroom.building === "9" && classroom.floor === 2 && classroom.number === "9203");
-  const m4 = schoolHours.find((hour) => hour.code === "M4")!;
+  const m4 = schoolHours.find((hour: any) => hour.code === "M4")!;
   if (maintenanceClassroom) {
     await prisma.classroomUnavailableSlot.create({
       data: {

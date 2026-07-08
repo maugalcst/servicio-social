@@ -37,7 +37,7 @@ enum WeekDay {
 model User {
   id             Int                @id @default(autoincrement())
   name           String
-  email          String             @unique
+  username     String   @unique
   passwordHash   String
   role           UserRole           @default(COORDINATOR)
   active         Boolean            @default(true)
@@ -73,10 +73,10 @@ model Career {
 }
 
 model Subject {
-  id            Int                @id @default(autoincrement())
-  code          String             @unique
+  id       Int    @id @default(autoincrement())
+  code          String            
   name          String
-  coordination  String             @default("Coordinación")
+  type          String             @default("Ordinaria")
   semester      Int
   careers       Career[]
   groupSubjects GroupSubject[]

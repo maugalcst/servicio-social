@@ -9,8 +9,8 @@ export function LoginForm() {
   return (
     <form action={action} className="login-form">
       <label>
-        Email
-        <input name="email" type="email" placeholder="ejemplo@uanl.edu.mx" required />
+        Usuario
+        <input name="username" type="text" placeholder="Usuario" required />
       </label>
       <label>
         Contraseña
