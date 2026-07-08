@@ -187,7 +187,7 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
 
     return (
         <div className="crud-page">
-            {notice && (
+            {notice && !mode && (
                 <div className={`action-toast ${notice.type === "error" ? "error" : "success"}`}>
                     <span>{notice.text}</span>
                     <button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">
@@ -311,19 +311,44 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
             </section>
 
             {mode && (
-                <div className="modal-backdrop">
-                    <div className={`modal crud-modal subject-modal ${mode === "delete" ? "confirm-modal" : ""}`}>
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !pending) {
+                            closeModal();
+                        }
+                    }}
+                >
+                    <div
+                        className={`modal crud-modal subject-modal ${mode === "delete" ? "confirm-modal" : ""
+                            }`}
+                        onMouseDown={(event) => event.stopPropagation()}
+                    >
                         {mode === "delete" ? (
                             <>
                                 <h2>Eliminar materia</h2>
+
                                 <p>¿Estas seguro de eliminar la materia?</p>
-                                <strong className="confirm-name">Materia: {selected?.name}</strong>
+
+                                <strong className="confirm-name">
+                                    Materia: {selected?.name}
+                                </strong>
 
                                 <div className="confirm-actions">
-                                    <button className="danger-wide" type="button" disabled={pending} onClick={remove}>
+                                    <button
+                                        className="danger-wide"
+                                        type="button"
+                                        disabled={pending}
+                                        onClick={remove}
+                                    >
                                         {pending ? "Eliminando..." : "Eliminar materia"}
                                     </button>
-                                    <button type="button" disabled={pending} onClick={closeModal}>
+
+                                    <button
+                                        type="button"
+                                        disabled={pending}
+                                        onClick={closeModal}
+                                    >
                                         Cancelar
                                     </button>
                                 </div>
@@ -332,37 +357,61 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
                             <>
                                 <h2>{mode === "add" ? "Agregar materia" : "Editar"}</h2>
 
-                                {notice?.type === "error" && <div className="modal-error">{notice.text}</div>}
+                                {notice?.type === "error" && (
+                                    <div className="modal-error">
+                                        {notice.text}
+                                    </div>
+                                )}
 
                                 <div className="crud-form">
-                                    <label>Clave</label>
-                                    <input
-                                        placeholder="Clave"
-                                        value={form.code}
-                                        onChange={(event) => setForm({ ...form, code: event.target.value })}
-                                    />
+                                    <div className="form-grid-2">
+                                        <div className="form-field">
+                                            <label>Clave</label>
+                                            <input
+                                                placeholder="Clave"
+                                                value={form.code}
+                                                onChange={(event) =>
+                                                    setForm({ ...form, code: event.target.value })
+                                                }
+                                            />
+                                        </div>
+
+                                        <div className="form-field">
+                                            <label>Tipo</label>
+                                            <select
+                                                value={form.type}
+                                                onChange={(event) =>
+                                                    setForm({ ...form, type: event.target.value })
+                                                }
+                                            >
+                                                <option value="">Seleccione el tipo</option>
+                                                <option value="Ordinaria">Ordinaria</option>
+                                                <option value="Laboratorio">Laboratorio</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
                                     <label>Nombre</label>
                                     <input
                                         placeholder="Nombre"
                                         value={form.name}
-                                        onChange={(event) => setForm({ ...form, name: event.target.value })}
+                                        onChange={(event) =>
+                                            setForm({ ...form, name: event.target.value })
+                                        }
                                     />
-
-                                    <label>Tipo</label>
-                                    <select value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>
-                                        <option value="">Seleccione el tipo</option>
-                                        <option value="Ordinaria">Ordinaria</option>
-                                        <option value="Laboratorio">Laboratorio</option>
-                                    </select>
 
                                     <label>Carrera (s)</label>
                                     <div className="multi-wrap">
-                                        <button className="multi-field" type="button" onClick={() => setMulti((current) => !current)}>
+                                        <button
+                                            className="multi-field"
+                                            type="button"
+                                            onClick={() => setMulti((current) => !current)}
+                                        >
                                             <span>
                                                 {form.careerIds.length
                                                     ? form.careerIds.map((id) => {
                                                         const career = careers.find((item) => item.id === id);
+
                                                         if (!career) return null;
 
                                                         return (
@@ -383,6 +432,7 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
                                                     })
                                                     : "Agrega carrera o carreras desde el menú multiselección"}
                                             </span>
+
                                             <Grid3X3 size={17} />
                                         </button>
 
@@ -392,7 +442,9 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
                                                     <button
                                                         key={career.id}
                                                         type="button"
-                                                        className={form.careerIds.includes(career.id) ? "chosen" : ""}
+                                                        className={
+                                                            form.careerIds.includes(career.id) ? "chosen" : ""
+                                                        }
                                                         onClick={() => toggleCareer(career.id)}
                                                     >
                                                         {career.acronym}
@@ -409,15 +461,31 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
                                         max="12"
                                         placeholder="Semestre"
                                         value={form.semester}
-                                        onChange={(event) => setForm({ ...form, semester: Number(event.target.value) })}
+                                        onChange={(event) =>
+                                            setForm({
+                                                ...form,
+                                                semester: Number(event.target.value)
+                                            })
+                                        }
                                     />
                                 </div>
 
                                 <div className="form-actions">
-                                    <button className="cancel-red" type="button" disabled={pending} onClick={closeModal}>
+                                    <button
+                                        className="cancel-red"
+                                        type="button"
+                                        disabled={pending}
+                                        onClick={closeModal}
+                                    >
                                         Cancelar
                                     </button>
-                                    <button className="accept-green" type="button" disabled={pending} onClick={save}>
+
+                                    <button
+                                        className="accept-green"
+                                        type="button"
+                                        disabled={pending}
+                                        onClick={save}
+                                    >
                                         {pending ? "Guardando..." : "Aceptar"}
                                     </button>
                                 </div>
@@ -426,6 +494,7 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
                     </div>
                 </div>
             )}
-        </div>
+
+        </div >
     );
 }

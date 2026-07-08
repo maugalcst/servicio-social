@@ -542,11 +542,26 @@ tbody tr:hover {
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(21, 29, 32, .55);
-    z-index: 20;
-    display: grid;
-    place-items: center;
-    padding: 20px
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 16px;
+    overflow-y: auto;
+}
+
+.modal-error {
+    width: 100%;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #f3a1a6;
+    border-radius: 8px;
+    background: #fff1f2;
+    color: #9f1d25;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
 }
 
 .modal {
@@ -1112,6 +1127,324 @@ tbody tr:hover {
     .form-grid-2 {
         grid-template-columns: 1fr;
     }
+}
+
+.request-modal-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 7px;
+    background: #0d6b3a;
+    color: #ffffff;
+    padding: 9px 13px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.request-modal-button:hover {
+    background: #09582f;
+}
+
+.request-modal {
+    position: relative;
+    width: min(760px, calc(100vw - 32px));
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 34px 34px 28px;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.25);
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 22px;
+    right: 22px;
+    border: 0;
+    background: transparent;
+    color: #667085;
+    cursor: pointer;
+}
+
+.request-modal-header {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.request-modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: #dff8e9;
+    color: #0d6b3a;
+}
+
+.request-modal-header h2 {
+    margin: 0;
+    color: #101828;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.request-modal-header p {
+    margin: 6px 0 0;
+    color: #667085;
+    font-size: 15px;
+}
+
+.request-subject-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+    padding: 13px 15px;
+    border-radius: 9px;
+    background: #f6f8f7;
+    border: 1px solid #e3e8e5;
+}
+
+.request-subject-summary strong {
+    color: #0d6b3a;
+    font-size: 14px;
+}
+
+.request-subject-summary span {
+    color: #111827;
+    font-weight: 700;
+}
+
+.request-subject-summary em {
+    margin-left: auto;
+    border-radius: 999px;
+    padding: 4px 10px;
+    background: #e9ecef;
+    color: #374151;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 700;
+}
+
+.request-form-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px 20px;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-field label {
+    color: #1f2937;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.form-field input,
+.form-field select {
+    width: 100%;
+    height: 48px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #344054;
+    padding: 0 14px;
+    font-size: 15px;
+}
+
+.request-preview {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #eaecf0;
+}
+
+.request-preview h3 {
+    margin: 0 0 14px;
+    color: #111827;
+    font-size: 16px;
+}
+
+.request-preview div {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 11px;
+}
+
+.request-preview span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    border-radius: 8px;
+    background: #f9fafb;
+    color: #344054;
+    padding: 8px 11px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.request-preview svg {
+    color: #0d6b3a;
+}
+
+.request-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 14px;
+    margin-top: 28px;
+}
+
+.request-cancel,
+.request-save {
+    min-width: 150px;
+    height: 48px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.request-cancel {
+    border: 1px solid #d0d5dd;
+    background: #ffffff;
+    color: #344054;
+}
+
+.request-save {
+    border: 0;
+    background: #0d6b3a;
+    color: #ffffff;
+}
+
+.request-save:hover {
+    background: #09582f;
+}
+
+.modal-success {
+    width: 100%;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #a7dbb4;
+    border-radius: 7px;
+    background: #effaf1;
+    color: #145a2d;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+@media (max-width: 860px) {
+
+    .request-form-grid,
+    .request-preview div {
+        grid-template-columns: 1fr;
+    }
+
+    .request-modal {
+        padding: 28px 20px;
+    }
+
+    .request-subject-summary em {
+        margin-left: 0;
+    }
+}
+
+.request-divider {
+    margin: 24px 0 18px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.added-schedules-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.added-schedules-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #111827;
+}
+
+.add-schedule-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px dashed #0d6b3a;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0d6b3a;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.add-schedule-button:hover {
+    background: #f0faf4;
+}
+
+.added-schedules-table {
+    border: 1px solid #e5e7eb;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.added-schedules-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.added-schedules-table th {
+    background: #f9fafb;
+    color: #667085;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 13px 16px;
+    text-align: left;
+}
+
+.added-schedules-table td {
+    padding: 14px 16px;
+    border-top: 1px solid #edf0f2;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.schedule-day-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.schedule-day-cell svg {
+    color: #0d6b3a;
+}
+
+.schedule-delete {
+    border: 0;
+    background: transparent;
+    color: #667085;
+    cursor: pointer;
+}
+
+.schedule-delete:hover {
+    color: #dc2626;
 }
 
 /* Dashboard de coordinadores y auxiliares */

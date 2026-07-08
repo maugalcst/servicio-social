@@ -480,12 +480,16 @@ export async function deleteClassroomAction(
     return actionError(error, "No se pudo eliminar el salón.");
   }
 }
-
-const groupRequestSchema = z.object({
-  groupSubjectId: z.coerce.number().int().positive(),
-  classroomId: z.coerce.number().int().positive(),
+const scheduleItemSchema = z.object({
   dayOfWeek: z.nativeEnum(WeekDay),
   schoolHourId: z.coerce.number().int().positive()
+});
+
+const groupRequestSchema = z.object({
+  subjectId: z.coerce.number().int().positive(),
+  classroomId: z.coerce.number().int().positive(),
+  groupCode: z.string().trim().min(1).default("1"),
+  schedules: z.array(scheduleItemSchema).min(1, "Agrega al menos un horario.")
 });
 
 export async function requestGroupClassroomAction(
@@ -497,81 +501,305 @@ export async function requestGroupClassroomAction(
   try {
     const user = await requireUser();
 
+    if (!user.careerId) {
+      return {
+        ok: false,
+        error: "Tu usuario no tiene una carrera asignada."
+      };
+    }
+
+    const rawSchedules = formData.get("schedules");
+
+    if (!rawSchedules) {
+      return {
+        ok: false,
+        error: "Agrega al menos un horario antes de enviar la solicitud."
+      };
+    }
+
+    let schedulesJson: unknown;
+
+    try {
+      schedulesJson = JSON.parse(String(rawSchedules));
+    } catch {
+      return {
+        ok: false,
+        error: "Los horarios enviados no tienen un formato válido."
+      };
+    }
+
     const parsed = groupRequestSchema.safeParse({
-      groupSubjectId: formData.get("groupSubjectId"),
+      subjectId: formData.get("subjectId"),
       classroomId: formData.get("classroomId"),
-      dayOfWeek: formData.get("dayOfWeek"),
-      schoolHourId: formData.get("schoolHourId")
+      groupCode: formData.get("groupCode") || "1",
+      schedules: schedulesJson
     });
 
     if (!parsed.success) {
-      return { ok: false, error: validationError(parsed.error) || "Datos de solicitud inválidos." };
+      return {
+        ok: false,
+        error: validationError(parsed.error) || "Datos de solicitud inválidos."
+      };
     }
 
-    const assignment = await prisma.groupSubject.findUnique({
-      where: { id: parsed.data.groupSubjectId },
-      include: { group: true, subject: true }
+    const { subjectId, classroomId, groupCode, schedules } = parsed.data;
+
+    const subject = await prisma.subject.findUnique({
+      where: {
+        id: subjectId
+      },
+      include: {
+        careers: true
+      }
     });
 
-    if (!assignment || assignment.group.coordinatorId !== user.id) {
-      return { ok: false, error: "No puedes solicitar este salón para esa materia." };
+    if (!subject) {
+      return {
+        ok: false,
+        error: "La materia seleccionada no existe."
+      };
+    }
+
+    const subjectBelongsToUserCareer = subject.careers.some(
+      (career) => career.id === user.careerId
+    );
+
+    if (!subjectBelongsToUserCareer) {
+      return {
+        ok: false,
+        error: "La materia seleccionada no pertenece a tu carrera."
+      };
     }
 
     const classroom = await prisma.classroom.findUnique({
-      where: { id: parsed.data.classroomId }
+      where: {
+        id: classroomId
+      }
     });
 
     if (!classroom || classroom.status !== ClassroomStatus.AVAILABLE) {
-      return { ok: false, error: "El salón está inhabilitado o en mantenimiento." };
+      return {
+        ok: false,
+        error: "El salón está inhabilitado o en mantenimiento."
+      };
     }
 
-    const unavailableSlot = await prisma.classroomUnavailableSlot.findUnique({
+    const normalizedGroupCode = groupCode.trim() || "1";
+
+    let group = await prisma.academicGroup.findFirst({
       where: {
-        classroomId_dayOfWeek_schoolHourId: {
-          classroomId: parsed.data.classroomId,
-          dayOfWeek: parsed.data.dayOfWeek,
-          schoolHourId: parsed.data.schoolHourId
+        code: normalizedGroupCode,
+        careerId: user.careerId,
+        semester: subject.semester
+      }
+    });
+
+    if (!group) {
+      group = await prisma.academicGroup.create({
+        data: {
+          code: normalizedGroupCode,
+          careerId: user.careerId,
+          semester: subject.semester,
+          students: 0,
+          coordinatorId: user.id
         }
-      }
-    });
-
-    if (unavailableSlot?.active) {
-      return { ok: false, error: `El salón está inhabilitado en ese horario: ${unavailableSlot.reason}` };
+      });
     }
 
-    const conflictingRequest = await prisma.classroomRequest.findFirst({
+    const uniqueScheduleKeys = new Set(
+      schedules.map((schedule) => `${schedule.dayOfWeek}-${schedule.schoolHourId}`)
+    );
+
+    if (uniqueScheduleKeys.size !== schedules.length) {
+      return {
+        ok: false,
+        error: "No puedes agregar el mismo día y hora más de una vez."
+      };
+    }
+
+    const schoolHourIds = schedules.map((schedule) => schedule.schoolHourId);
+    const uniqueSchoolHourIds = Array.from(new Set(schoolHourIds));
+
+    const schoolHours = await prisma.schoolHour.findMany({
       where: {
-        classroomId: parsed.data.classroomId,
-        dayOfWeek: parsed.data.dayOfWeek,
-        schoolHourId: parsed.data.schoolHourId,
-        status: { in: [RequestStatus.PENDING, RequestStatus.APPROVED] }
+        id: {
+          in: uniqueSchoolHourIds
+        }
+      },
+      orderBy: {
+        sortOrder: "asc"
       }
     });
 
-    if (conflictingRequest) {
-      return { ok: false, error: "Ya existe una solicitud o asignación para ese salón en el mismo día y hora." };
+    if (schoolHours.length !== uniqueSchoolHourIds.length) {
+      return {
+        ok: false,
+        error: "Una o más horas escolares no existen."
+      };
     }
 
-    await prisma.classroomRequest.create({
-      data: {
-        coordinatorId: user.id,
-        careerId: assignment.group.careerId,
-        subjectId: assignment.subjectId,
-        classroomId: parsed.data.classroomId,
-        semester: assignment.group.semester,
-        groupSubjectId: assignment.id,
-        dayOfWeek: parsed.data.dayOfWeek,
-        schoolHourId: parsed.data.schoolHourId,
-        status: RequestStatus.PENDING
+    const unavailableSlots = await prisma.classroomUnavailableSlot.findMany({
+      where: {
+        classroomId,
+        active: true,
+        OR: schedules.map((schedule) => ({
+          dayOfWeek: schedule.dayOfWeek,
+          schoolHourId: schedule.schoolHourId
+        }))
+      },
+      include: {
+        schoolHour: true
       }
     });
+
+    if (unavailableSlots.length > 0) {
+      const blockedHours = unavailableSlots
+        .map((slot) => {
+          const dayName =
+            {
+              MONDAY: "Lunes",
+              TUESDAY: "Martes",
+              WEDNESDAY: "Miércoles",
+              THURSDAY: "Jueves",
+              FRIDAY: "Viernes",
+              SATURDAY: "Sábado"
+            }[slot.dayOfWeek] || slot.dayOfWeek;
+
+          return `${dayName} ${slot.schoolHour.code}: ${slot.reason || "No disponible"}`;
+        })
+        .join(", ");
+
+      return {
+        ok: false,
+        error: `El salón está inhabilitado en estos horarios: ${blockedHours}.`
+      };
+    }
+
+    const conflictingRequests = await prisma.classroomRequest.findMany({
+      where: {
+        classroomId,
+        status: {
+          in: [RequestStatus.PENDING, RequestStatus.APPROVED]
+        },
+        OR: schedules.map((schedule) => ({
+          dayOfWeek: schedule.dayOfWeek,
+          schoolHourId: schedule.schoolHourId
+        }))
+      },
+      include: {
+        schoolHour: true
+      }
+    });
+
+    if (conflictingRequests.length > 0) {
+      const conflictedHours = conflictingRequests
+        .map((request) => {
+          const dayName =
+            {
+              MONDAY: "Lunes",
+              TUESDAY: "Martes",
+              WEDNESDAY: "Miércoles",
+              THURSDAY: "Jueves",
+              FRIDAY: "Viernes",
+              SATURDAY: "Sábado"
+            }[request.dayOfWeek] || request.dayOfWeek;
+
+          return `${dayName} ${request.schoolHour.code}`;
+        })
+        .join(", ");
+
+      return {
+        ok: false,
+        error: `Ya existe una solicitud o asignación para ese salón en estos horarios: ${conflictedHours}.`
+      };
+    }
+
+    let assignment = await prisma.groupSubject.findFirst({
+      where: {
+        groupId: group.id,
+        subjectId
+      }
+    });
+
+    if (!assignment) {
+      assignment = await prisma.groupSubject.create({
+        data: {
+          groupId: group.id,
+          subjectId
+        }
+      });
+    }
+
+    const existingSameRequests = await prisma.classroomRequest.findMany({
+      where: {
+        groupSubjectId: assignment.id,
+        classroomId,
+        status: {
+          in: [RequestStatus.PENDING, RequestStatus.APPROVED]
+        },
+        OR: schedules.map((schedule) => ({
+          dayOfWeek: schedule.dayOfWeek,
+          schoolHourId: schedule.schoolHourId
+        }))
+      },
+      include: {
+        schoolHour: true
+      }
+    });
+
+    if (existingSameRequests.length > 0) {
+      const duplicatedHours = existingSameRequests
+        .map((request) => {
+          const dayName =
+            {
+              MONDAY: "Lunes",
+              TUESDAY: "Martes",
+              WEDNESDAY: "Miércoles",
+              THURSDAY: "Jueves",
+              FRIDAY: "Viernes",
+              SATURDAY: "Sábado"
+            }[request.dayOfWeek] || request.dayOfWeek;
+
+          return `${dayName} ${request.schoolHour.code}`;
+        })
+        .join(", ");
+
+      return {
+        ok: false,
+        error: `Ya existe una solicitud para esta materia y grupo en estos horarios: ${duplicatedHours}.`
+      };
+    }
+
+    await prisma.$transaction(
+      schedules.map((schedule) =>
+        prisma.classroomRequest.create({
+          data: {
+            coordinatorId: user.id,
+            careerId: user.careerId!,
+            subjectId,
+            classroomId,
+            semester: subject.semester,
+            groupSubjectId: assignment.id,
+            dayOfWeek: schedule.dayOfWeek,
+            schoolHourId: schedule.schoolHourId,
+            status: RequestStatus.PENDING
+          }
+        })
+      )
+    );
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/materias");
     revalidatePath("/dashboard/grupos");
+    revalidatePath("/dashboard/salones");
     revalidatePath("/admin/solicitudes");
+    revalidatePath("/admin/asignaciones");
 
-    return actionOk("Solicitud enviada correctamente.");
+    return actionOk(
+      schedules.length === 1
+        ? "Solicitud enviada correctamente."
+        : `Se enviaron ${schedules.length} solicitudes correctamente.`
+    );
   } catch (error) {
     return actionError(error, "No se pudo enviar la solicitud.");
   }

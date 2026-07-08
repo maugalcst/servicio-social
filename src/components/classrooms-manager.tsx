@@ -82,80 +82,87 @@ export function ClassroomsManager({ classrooms }: { classrooms: Classroom[] }) {
       <div className="pagination"><button disabled={safePage <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}><ArrowLeft size={18} /></button><button disabled={safePage >= pageCount} onClick={() => setPage(p => Math.min(pageCount, p + 1))}><ArrowRight size={18} /></button></div>
     </section>
 
-    {mode && <div className="modal-backdrop"><div className={`modal crud-modal classroom-modal ${mode === "delete" ? "confirm-modal" : ""}`}>
-      {mode === "delete" ? <><h2>Eliminar salón</h2><p>¿Estás seguro de eliminar el salón?</p><strong className="confirm-name">Salón: {selected?.number}</strong><div className="confirm-actions"><button className="danger-wide" disabled={pending} onClick={remove}>Eliminar salón</button><button onClick={() => setMode(null)}>Cancelar</button></div></>
-        : <><h2>{mode === "add" ? "Agregar salón" : "Editar salón"}</h2><div className="crud-form">
-          <div className="form-grid-2">
-            <div>
-              <label>Edificio</label>
-              <input
-                placeholder="Edificio"
-                value={form.building}
-                onChange={e => setForm({ ...form, building: e.target.value })}
-              />
+    {mode && <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !pending) {
+          setMode(null);
+        }
+      }}
+    ><div className={`modal crud-modal classroom-modal ${mode === "delete" ? "confirm-modal" : ""}`}>
+        {mode === "delete" ? <><h2>Eliminar salón</h2><p>¿Estás seguro de eliminar el salón?</p><strong className="confirm-name">Salón: {selected?.number}</strong><div className="confirm-actions"><button className="danger-wide" disabled={pending} onClick={remove}>Eliminar salón</button><button onClick={() => setMode(null)}>Cancelar</button></div></>
+          : <><h2>{mode === "add" ? "Agregar salón" : "Editar salón"}</h2><div className="crud-form">
+            <div className="form-grid-2">
+              <div>
+                <label>Edificio</label>
+                <input
+                  placeholder="Edificio"
+                  value={form.building}
+                  onChange={e => setForm({ ...form, building: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label>Piso</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Piso"
+                  value={form.floor}
+                  onChange={e => setForm({ ...form, floor: e.target.value })}
+                />
+              </div>
             </div>
 
-            <div>
-              <label>Piso</label>
-              <input
-                type="number"
-                min="0"
-                placeholder="Piso"
-                value={form.floor}
-                onChange={e => setForm({ ...form, floor: e.target.value })}
-              />
+            <div className="form-grid-2">
+              <div>
+                <label>Salón</label>
+                <input
+                  placeholder="Salón"
+                  value={form.number}
+                  onChange={e => setForm({ ...form, number: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label>Capacidad</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Capacidad"
+                  value={form.capacity}
+                  onChange={e => setForm({ ...form, capacity: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="form-grid-2">
-            <div>
-              <label>Salón</label>
-              <input
-                placeholder="Salón"
-                value={form.number}
-                onChange={e => setForm({ ...form, number: e.target.value })}
-              />
-            </div>
+            <label>Estado</label>
+            <select
+              value={form.status}
+              onChange={e => {
+                const newStatus = e.target.value as ClassroomStatus;
+                setForm({
+                  ...form,
+                  status: newStatus,
+                  blockReason: newStatus === "AVAILABLE" ? "" : form.blockReason
+                });
+              }}
+            >
+              <option value="AVAILABLE">Disponible</option>
+              <option value="UNAVAILABLE">Inhabilitado</option>
+            </select>
 
-            <div>
-              <label>Capacidad</label>
-              <input
-                type="number"
-                min="1"
-                placeholder="Capacidad"
-                value={form.capacity}
-                onChange={e => setForm({ ...form, capacity: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <label>Estado</label>
-          <select
-            value={form.status}
-            onChange={e => {
-              const newStatus = e.target.value as ClassroomStatus;
-              setForm({
-                ...form,
-                status: newStatus,
-                blockReason: newStatus === "AVAILABLE" ? "" : form.blockReason
-              });
-            }}
-          >
-            <option value="AVAILABLE">Disponible</option>
-            <option value="UNAVAILABLE">Inhabilitado</option>
-          </select>
-
-          {form.status === "UNAVAILABLE" && (
-            <>
-              <label>Motivo de inhabilitación</label>
-              <textarea
-                placeholder="Detalle del motivo de inhabilitación..."
-                value={form.blockReason || ""}
-                onChange={e => setForm({ ...form, blockReason: e.target.value })}
-              />
-            </>
-          )}
-        </div><div className="form-actions"><button className="cancel-red" onClick={() => setMode(null)}>Cancelar</button><button className="accept-green" disabled={pending} onClick={save}>Aceptar</button></div></>}
-    </div></div>}
+            {form.status === "UNAVAILABLE" && (
+              <>
+                <label>Motivo de inhabilitación</label>
+                <textarea
+                  placeholder="Detalle del motivo de inhabilitación..."
+                  value={form.blockReason || ""}
+                  onChange={e => setForm({ ...form, blockReason: e.target.value })}
+                />
+              </>
+            )}
+          </div><div className="form-actions"><button className="cancel-red" onClick={() => setMode(null)}>Cancelar</button><button className="accept-green" disabled={pending} onClick={save}>Aceptar</button></div></>}
+      </div></div>}
   </div>;
 }

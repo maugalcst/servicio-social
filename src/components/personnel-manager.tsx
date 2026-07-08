@@ -365,7 +365,14 @@ export function PersonnelManager({
             </section>
 
             {mode ? (
-                <div className="modal-backdrop">
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget && !pending) {
+                            setMode(null);
+                        }
+                    }}
+                >
                     <div className={`modal crud-modal ${mode === "delete" ? "confirm-modal" : ""}`}>
                         {notice ? <InlineNotice notice={notice} onClose={() => setNotice(null)} /> : null}
 
