@@ -329,14 +329,49 @@ export async function saveSubjectAction(
     }
 
     const { id, careerIds, ...data } = parsed.data;
-    const relation = { set: careerIds.map((careerId) => ({ id: careerId })) };
+
+    const normalizedCode = data.code.trim().toUpperCase();
+    const normalizedType = data.type.trim();
+
+    const duplicate = await prisma.subject.findFirst({
+      where: {
+        code: normalizedCode,
+        type: normalizedType,
+        ...(id
+          ? {
+            id: {
+              not: id
+            }
+          }
+          : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (duplicate) {
+      return {
+        ok: false,
+        error: `Ya existe una materia con clave ${normalizedCode} y tipo ${normalizedType}.`
+      };
+    }
+
+    const relation = {
+      set: careerIds.map((careerId) => ({
+        id: careerId
+      }))
+    };
 
     if (id) {
       await prisma.subject.update({
-        where: { id },
+        where: {
+          id
+        },
         data: {
           ...data,
-          code: data.code.toUpperCase(),
+          code: normalizedCode,
+          type: normalizedType,
           careers: relation
         }
       });
@@ -344,14 +379,22 @@ export async function saveSubjectAction(
       await prisma.subject.create({
         data: {
           ...data,
-          code: data.code.toUpperCase(),
-          careers: { connect: careerIds.map((careerId) => ({ id: careerId })) }
+          code: normalizedCode,
+          type: normalizedType,
+          careers: {
+            connect: careerIds.map((careerId) => ({
+              id: careerId
+            }))
+          }
         }
       });
     }
 
     revalidatePath("/admin/materias");
-    return actionOk(id ? "Materia actualizada correctamente." : "Materia creada correctamente.");
+
+    return actionOk(
+      id ? "Materia actualizada correctamente." : "Materia creada correctamente."
+    );
   } catch (error) {
     return actionError(error, "No se pudo guardar la materia.");
   }

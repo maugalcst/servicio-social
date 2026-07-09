@@ -188,14 +188,18 @@ export function SubjectsManager({ subjects, careers }: { subjects: Subject[]; ca
     return (
         <div className="crud-page">
             {notice && !mode && (
-                <div className={`action-toast ${notice.type === "error" ? "error" : "success"}`}>
+                <div className={`action-toast ${notice.type}`}>
                     <span>{notice.text}</span>
-                    <button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">
+
+                    <button
+                        type="button"
+                        onClick={() => setNotice(null)}
+                        aria-label="Cerrar mensaje"
+                    >
                         <X size={16} />
                     </button>
                 </div>
             )}
-
             <section className="table-card subject-card">
                 <div className="subject-heading">
                     <div>
